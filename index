@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>辉光放电仿真 + 辉光球模拟 | 动态平行板间距 | 物理实验教学</title>
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <style>
+        :root {
+            --bg: #f5f7fc;
+            --card-bg: rgba(255, 255, 255, 0.94);
+            --text: #1e2f4e;
+            --accent: #2c6e9e;
+            --accent2: #3a7ca5;
+            --panel-bg: #f8fafd;
+            --border: #e2edf7;
+            --dark-bg: #1a262f;
+            --glow-purple: #9b59b6;
+            --arc-red: #e74c3c;
+            --gold: #ffaa44;
+            --radius: 1.5rem;
+            --shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+            --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(160deg, #eef2f8 0%, #dce4f0 30%, #e8ecf4 60%, #f4f6fa 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 16px;
+            color: var(--text);
+        }
+        .sim-card {
+            max-width: 1540px;
+            width: 100%;
+            background: var(--card-bg);
+            backdrop-filter: blur(6px);
+            border-radius: 2rem;
+            box-shadow: var(--shadow), 0 0 0 1px rgba(255, 255, 255, 0.6);
+            padding: 1.4rem 1.8rem 1.8rem;
+            margin-top: 8px;
+        }
+        h1 {
+            font-size: 1.6rem;
+            margin: 0 0 0.2rem 0;
+            color: #1a2d44;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            letter-spacing: -0.3px;
+        }
+        h1 small {
+            font-size: 0.72rem;
+            font-weight: 500;
+            background: #dfe8f4;
+            padding: 5px 14px;
+            border-radius: 40px;
+            color: #1e466e;
+            letter-spacing: 0;
+        }
+        .sub {
+            color: #3a5a7e;
+            border-left: 4px solid #3a7ca5;
+            padding-left: 0.9rem;
+            margin: 0.4rem 0 1.2rem 0;
+            font-weight: 500;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .mode-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px solid #cbdae9;
+            padding-bottom: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .mode-btn {
+            background: transparent;
+            border: 2px solid transparent;
+            padding: 9px 22px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            color: #3a5a7e;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .mode-btn:hover {
+            background: #e8f0f8;
+            border-color: #c0d4e8;
+        }
+        .mode-btn.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 3px 10px rgba(44, 110, 158, 0.3);
+        }
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .control-panel {
+            flex: 1 1 300px;
+            min-width: 270px;
+            max-width: 420px;
+            background: var(--panel-bg);
+            border-radius: var(--radius);
+            padding: 1.2rem 1.3rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
+        }
+        .vis-panel {
+            flex: 2.2 1 540px;
+            min-width: 380px;
+            background: #ffffffcc;
+            border-radius: var(--radius);
+            padding: 1rem 1.2rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
+        }
+        .param-group {
+            margin-bottom: 1rem;
+            background: #fff;
+            border-radius: 1rem;
+            padding: 10px 14px;
+            border: 1px solid #e8eef5;
+        }
+        .param-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: #1f3b4c;
+            margin-bottom: 4px;
+            font-size: 0.88rem;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .param-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        input[type="range"] {
+            flex: 1;
+            cursor: pointer;
+            accent-color: var(--accent);
+            height: 6px;
+            min-width: 80px;
+        }
+        input[type="number"] {
+            width: 72px;
+            padding: 5px 6px;
+            border-radius: 10px;
+            border: 1.5px solid #c8d8e8;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            text-align: center;
+            background: #fafbfd;
+            color: #1e3b5c;
+            transition: border 0.2s;
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            opacity: 1;
+            height: 24px;
+        }
+        input[type="number"]:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(44, 110, 158, 0.1);
+            background: #fff;
+        }
+        .param-value {
+            font-family: var(--font-mono);
+            background: #eef3fc;
+            padding: 3px 9px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .unit-hint {
+            font-size: 0.7rem;
+            color: #7a8fa0;
+            font-weight: 400;
+        }
+        select {
+            width: 100%;
+            padding: 7px 10px;
+            border-radius: 12px;
+            background: #fafbfd;
+            border: 1.5px solid #c8d8e8;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1e3b5c;
+            cursor: pointer;
+            transition: border 0.2s;
+        }
+        select:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(44, 110, 158, 0.1);
+        }
+        .formula-box {
+            background: #eaf2fb;
+            border-radius: 1rem;
+            padding: 10px 14px;
+            border: 1px solid #d0dff0;
+            margin-bottom: 1rem;
+            font-size: 0.84rem;
+            line-height: 1.5;
+        }
+        .formula-box .formula-title {
+            font-weight: 700;
+            color: #1e3b5c;
+            margin-bottom: 4px;
+            font-size: 0.88rem;
+        }
+        .formula-box .formula-math {
+            font-family: var(--font-mono);
+            font-size: 0.84rem;
+            color: #2c5a8e;
+            background: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 4px 0;
+            letter-spacing: 0.3px;
+            font-weight: 600;
+        }
+        .formula-box .formula-detail {
+            font-size: 0.75rem;
+            color: #5a7a9e;
+            line-height: 1.5;
+        }
+        .status-card {
+            background: #1e2f3f;
+            color: #fff;
+            border-radius: 1.2rem;
+            padding: 0.8rem 1rem;
+            margin-top: 0.8rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .discharge-state {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: #2c4e6e;
+            display: inline-block;
+            padding: 0.3rem 1.2rem;
+            border-radius: 40px;
+            margin-top: 6px;
+            transition: all 0.3s;
+        }
+        .status-row {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        .status-row span {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        .canvas-container {
+            background: var(--dark-bg);
+            border-radius: 1rem;
+            padding: 0.4rem;
+            margin-bottom: 0.8rem;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 0.8rem;
+            margin: 0 auto;
+            cursor: help;
+        }
+        .iv-canvas-wrapper {
+            background: #fdfaf5;
+            border-radius: 1rem;
+            padding: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e2e8f0;
+        }
+        .legend {
+            display: flex;
+            gap: 0.7rem;
+            justify-content: center;
+            font-size: 0.72rem;
+            flex-wrap: wrap;
+            padding: 4px 0;
+            color: #5a7a9e;
+        }
+        button {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+        button:hover {
+            background: #1f557c;
+            transform: scale(0.97);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        button.secondary {
+            background: #fff;
+            color: #2c6e9e;
+            border: 2px solid #c8d8e8;
+        }
+        button.secondary:hover {
+            background: #eef4fa;
+            border-color: #2c6e9e;
+        }
+        button.preset-btn {
+            background: #e8d5b0;
+            color: #5a3e1b;
+            border: 1.5px solid #c8a86a;
+            font-size: 0.78rem;
+            padding: 6px 14px;
+        }
+        button.preset-btn:hover {
+            background: #d4b880;
+            color: #3a2010;
+        }
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        hr {
+            margin: 0.8rem 0;
+            border: none;
+            border-top: 1px solid #d8e2ee;
+        }
+        .footer-note {
+            font-size: 0.7rem;
+            text-align: center;
+            color: #7a8fa0;
+            margin-top: 1rem;
+            letter-spacing: 0.3px;
+        }
+        .glowball-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #glowballCanvas {
+            background: #050b12;
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(0, 180, 255, 0.35), 0 0 80px rgba(100, 50, 255, 0.2);
+            cursor: crosshair;
+            width: 100%;
+            max-width: 340px;
+            aspect-ratio: 1;
+            margin: 0 auto;
+        }
+        .glowball-note {
+            font-size: 0.75rem;
+            text-align: center;
+            margin-top: 8px;
+            color: #2c6e9e;
+            font-weight: 500;
+        }
+        .region-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.74rem;
+            color: #5a7a9e;
+            font-weight: 600;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .tooltip-box {
+            position: fixed;
+            background: #1e2f3fec;
+            backdrop-filter: blur(14px);
+            color: #fff;
+            padding: 9px 15px;
+            border-radius: 24px;
+            font-size: 0.78rem;
+            max-width: 300px;
+            pointer-events: none;
+            z-index: 1000;
+            font-weight: 500;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+            transition: opacity 0.12s;
+            white-space: normal;
+            line-height: 1.45;
+            border-left: 3px solid var(--gold);
+        }
+        @media (max-width: 780px) {
+            .sim-card {
+                padding: 0.8rem;
+                border-radius: 1.2rem;
+            }
+            .discharge-state {
+                font-size: 1rem;
+            }
+            .control-panel {
+                max-width: 100%;
+                flex: 1 1 100%;
+            }
+            .vis-panel {
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+            h1 {
+                font-size: 1.2rem;
+            }
+            input[type="number"] {
+                width: 56px;
+                font-size: 0.75rem;
+            }
+            .param-group {
+                padding: 8px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sim-card">
+        <h1>⚡ 辉光放电仿真 + 🌐 辉光球模拟 <small>自选课题2 · 物理实验教学</small></h1>
+        <div class="sub">🔬 平行板辉光放电 | 帕邢定律 · 动态间距 · 放电区域 &nbsp;|&nbsp; 🌀 辉光球：电场驱动等离子丝</div>
+
+        <div class="mode-tabs">
+            <button id="modeGlowDischargeBtn" class="mode-btn active">⚛️ 平行板辉光放电</button>
+            <button id="modeGlowBallBtn" class="mode-btn">🌐 辉光球 (等离子球)</button>
+        </div>
+
+        <div id="dischargeModule">
+            <div class="dashboard">
+                <div class="control-panel">
+                    <div class="param-group">
+                        <label>🗲 电压 <i>U</i> <span class="unit-hint">(V)</span></label>
+                        <div class="param-row">
+                            <input type="range" id="voltageSlider" min="5" max="1200" step="1" value="400">
+                            <input type="number" id="voltageInput" min="5" max="1200" step="1" value="400">
+                        </div>
+                    </div>
+                    <div class="param-group">
+                        <label>🌀 气压 <i>p</i> <span class="unit-hint">(Pa)</span></label>
+                        <div class="param-row">
+                            <input type="range" id="pressureSlider" min="1" max="800" step="0.5" value="100">
+                            <input type="number" id="pressureInput" min="1" max="800" step="0.5" value="100">
+                        </div>
+                    </div>
+                    <div class="param-group">
+                        <label>📏 电极距离 <i>d</i> <span class="unit-hint">(mm)</span></label>
+                        <div class="param-row">
+                            <input type="range" id="distanceSlider" min="0.5" max="60" step="0.1" value="5.0">
+                            <input type="number" id="distanceInput" min="0.5" max="60" step="0.1" value="5.0">
+                        </div>
+                    </div>
+                    <div class="param-group">
+                        <label>📐 电极面积 <i>S</i> <span class="unit-hint">(cm²)</span></label>
+                        <div class="param-row">
+                            <input type="range" id="areaSlider" min="0.5" max="100" step="0.5" value="10">
+                            <input type="number" id="areaInput" min="0.5" max="100" step="0.5" value="10">
+                        </div>
+                    </div>
+                    <div class="param-group">
+                        <label>⚛️ 气体种类</label>
+                        <select id="gasSelect">
+                            <option value="ar">氩气 (Ar) — B=176 V/(cm·Torr), γ≈0.07</option>
+                            <option value="air">空气 (Air) — B=365 V/(cm·Torr), γ≈0.01</option>
+                            <option value="ne">氖气 (Ne) — B=100 V/(cm·Torr), γ≈0.04</option>
+                        </select>
+                    </div>
+
+                    <div class="formula-box">
+                        <div class="formula-title">📐 帕邢定律 — 击穿电压公式（标准形式）</div>
+                        <div class="formula-math">
+                            $$V_b = \frac{B \cdot p \cdot d}{\ln\left(\frac{A \cdot p \cdot d}{\ln\left(1 + \frac{1}{\gamma}\right)}\right)}$$
+                        </div>
+                        <div class="formula-detail" id="paschenFormulaDetails">
+                            <strong>当前参数：</strong>A=<span id="paramA">12.0</span> (cm·Torr)⁻¹, B=<span id="paramB">176</span>
+                            V/(cm·Torr), γ=<span id="paramGamma">0.07</span><br>
+                            pd = <span id="pdValue">0.0375</span> Torr·cm &nbsp;|&nbsp;
+                            击穿电压 V<sub>b</sub> = <strong id="paschenVinline">---</strong> V
+                        </div>
+                    </div>
+
+                    <div class="status-card">
+                        <div style="font-weight:600;">🔌 放电阶段</div>
+                        <div class="discharge-state" id="dischargeStateLabel">🔴 未击穿 / 暗放电</div>
+                        <div class="status-row">
+                            <span>📉 击穿电压 <strong id="paschenV">---</strong> V</span>
+                            <span>⚡ 电流 <strong id="simCurrent">0.00</strong> A</span>
+                        </div>
+                        <div class="status-row" style="margin-top:4px;">
+                            <span>📊 电流密度 <strong id="currentDensity">0.00</strong> A/cm²</span>
+                        </div>
+                    </div>
+
+                    <div class="btn-row">
+                        <button id="resetBtn" class="secondary">⟳ 默认参数</button>
+                        <button id="presetStandardBtn" class="preset-btn">📋 标准实验条件</button>
+                        <button id="presetNeonBtn" class="secondary">💡 氖气霓虹灯</button>
+                    </div>
+                </div>
+
+                <div class="vis-panel">
+                    <div class="canvas-container" id="dischargeCanvasContainer">
+                        <canvas id="dischargeCanvas" width="700" height="190"></canvas>
+                    </div>
+                    <div class="legend">
+                        <span>🟤 阿斯顿暗区</span> <span>🟠 阴极辉区</span> <span>⚫ 克鲁克斯暗区</span>
+                        <span>✨ 负辉区</span> <span>🔵 法拉第暗区</span> <span>🌀 正柱区</span> <span>🟢 阳极区</span>
+                    </div>
+                    <div style="margin-top: 12px;" class="iv-canvas-wrapper">
+                        <canvas id="iVCurveCanvas" width="820" height="370"></canvas>
+                        <div class="region-labels">
+                            <span>🔹 暗放电区 (A→E)</span>
+                            <span>🔹 辉光放电区 (F→H)</span>
+                            <span>🔹 电弧放电区 (I→K)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="glowballModule" style="display: none;">
+            <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; align-items: flex-start;">
+                <div class="glowball-container">
+                    <canvas id="glowballCanvas" width="400" height="400"></canvas>
+                    <div class="glowball-note">
+                        ✨ 鼠标在球内移动 → 放电丝追随手指 ✨<br>
+                        模拟高频高压电极产生的辐射状等离子体丝
+                    </div>
+                </div>
+                <div style="flex:1; min-width:220px; max-width:350px; background:#eef2f7; border-radius:1.5rem; padding:1.2rem;">
+                    <h3 style="margin-top:0;font-size:1rem;">🌐 辉光球参数控制</h3>
+                    <div style="margin-bottom:1.2rem;">
+                        <label style="display:flex;justify-content:space-between;font-weight:600;color:#1f3b4c;margin-bottom:4px;">
+                            ⚡ 电压 <span class="param-value" id="glowVoltageVal">80</span>
+                        </label>
+                        <input type="range" id="glowVoltageSlider" min="20" max="100" step="1" value="80"
+                        style="width:100%;cursor:pointer;accent-color:#2c6e9e;">
+                        <div style="font-size:0.72rem;color:#6c7e91;">高电压 → 丝更集中，分支更明显</div>
+                    </div>
+                    <div style="margin-bottom:1.2rem;">
+                        <label style="display:flex;justify-content:space-between;font-weight:600;color:#1f3b4c;margin-bottom:4px;">
+                            🌀 气压 <span class="param-value" id="glowPressureVal">50</span>
+                        </label>
+                        <input type="range" id="glowPressureSlider" min="10" max="100" step="1" value="50"
+                        style="width:100%;cursor:pointer;accent-color:#2c6e9e;">
+                        <div style="font-size:0.72rem;color:#6c7e91;">低气压 → 丝变细，抖动更明显</div>
+                    </div>
+                    <hr>
+                    <h4 style="margin-bottom:6px;font-size:0.9rem;">💡 辉光球原理</h4>
+                    <p style="font-size:0.8rem;margin:0;line-height:1.5;">辉光球内部有一个高压高频电极，球内充有稀薄惰性气体（氖、氩等）。电极产生强电场使气体电离，形成多条细丝状放电通道（等离子体丝）。</p>
+                    <p style="font-size:0.75rem;color:#2c6e9e;margin-top:8px;">🖱️ 鼠标在球内移动时，电场畸变使放电丝指向触摸点</p>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+        <div class="footer-note">
+            ⚛️ 自主构建：帕邢定律实时计算 | 平行板间距动态同步 | 区域悬停提示原理 | 伏安特性随参数联动 | A→K节点标注 | 动态电压轴自适应
+        </div>
+    </div>
+
+    <div class="tooltip-box" id="globalTooltip" style="opacity:0;"></div>
+
+    <script>
+        (function() {
+            const modeDischargeBtn = document.getElementById('modeGlowDischargeBtn');
+            const modeGlowballBtn = document.getElementById('modeGlowBallBtn');
+            const dischargeModule = document.getElementById('dischargeModule');
+            const glowballModule = document.getElementById('glowballModule');
+            const globalTooltip = document.getElementById('globalTooltip');
+
+            let glowVoltage = 80;
+            let glowPressure = 50;
+            let animationId = null;
+            let mouseX = 200,
+                mouseY = 200;
+            let isMouseInside = false;
+            let updateMouseHandler = null,
+                leaveMouseHandler = null,
+                touchMoveHandler = null,
+                touchEndHandler = null;
+
+            function switchToDischarge() {
+                modeDischargeBtn.classList.add('active');
+                modeGlowballBtn.classList.remove('active');
+                dischargeModule.style.display = 'block';
+                glowballModule.style.display = 'none';
+                stopGlowAnimation();
+                updateSimulation();
+            }
+
+            function switchToGlowball() {
+                modeGlowballBtn.classList.add('active');
+                modeDischargeBtn.classList.remove('active');
+                dischargeModule.style.display = 'none';
+                glowballModule.style.display = 'block';
+                stopGlowAnimation();
+                initGlowballAnimation();
+            }
+            modeDischargeBtn.addEventListener('click', switchToDischarge);
+            modeGlowballBtn.addEventListener('click', switchToGlowball);
+
+            const glowCanvas = document.getElementById('glowballCanvas');
+            let glowCtx = glowCanvas.getContext('2d');
+
+            function resizeGlowCanvas() {
+                glowCanvas.width = 400;
+                glowCanvas.height = 400;
+                mouseX = 200;
+                mouseY = 200;
+            }
+
+            function drawGlowball() {
+                if (!glowCtx) return;
+                const w = glowCanvas.width,
+                    h = glowCanvas.height;
+                const cx = w / 2,
+                    cy = h / 2;
+                const radius = w / 2 - 10;
+                const grad = glowCtx.createRadialGradient(cx, cy, 5, cx, cy, radius);
+                grad.addColorStop(0, '#0a1420');
+                grad.addColorStop(0.6, '#1a2a3a');
+                grad.addColorStop(1, '#2c445e');
+                glowCtx.fillStyle = grad;
+                glowCtx.fillRect(0, 0, w, h);
+                glowCtx.save();
+                glowCtx.shadowBlur = 0;
+                glowCtx.beginPath();
+                glowCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+                glowCtx.fillStyle = 'rgba(255,255,200,0.05)';
+                glowCtx.fill();
+                const numStrands = 28;
+                const time = Date.now() / 150;
+                const mouseVerticalPos = (cy - mouseY) / radius;
+                const heatRisePeriod = 8;
+                const heatRiseOffset = Math.sin(time / heatRisePeriod) * 0.5 + 0.5;
+                const bendAmount = Math.abs(mouseVerticalPos) < 0.6 ? (1 - Math.abs(mouseVerticalPos)) * 0.4 : 0;
+                for (let i = 0; i < numStrands; i++) {
+                    let angleBase = (i / numStrands) * Math.PI * 2;
+                    let startR = 8 + 2 * Math.sin(angleBase * 6 + time);
+                    let startX = cx + startR * Math.cos(angleBase);
+                    let startY = cy + startR * Math.sin(angleBase);
+                    let endX, endY;
+                    if (isMouseInside) {
+                        let dx = mouseX - startX,
+                            dy = mouseY - startY;
+                        let dist = Math.hypot(dx, dy);
+                        let extendRatio = (radius - startR) / Math.max(dist, 0.1);
+                        endX = startX + dx * extendRatio;
+                        endY = startY + dy * extendRatio;
+                        endY -= bendAmount * (radius - startR) * heatRiseOffset;
+                        let jitter = 0.05 * (1 - glowPressure / 100);
+                        endX += (Math.random() - 0.5) * jitter * radius;
+                        endY += (Math.random() - 0.5) * jitter * radius;
+                    } else {
+                        let endR = radius - 5;
+                        endX = cx + endR * Math.cos(angleBase);
+                        endY = cy + endR * Math.sin(angleBase);
+                    }
+                    let strandProgress = (time / heatRisePeriod + i / numStrands) % 1;
+                    let isStrandBroken = strandProgress > 0.85;
+                    let breakPointRatio = isStrandBroken ? (strandProgress - 0.85) / 0.15 : 1;
+                    let displayEndX = startX + (endX - startX) * breakPointRatio;
+                    let displayEndY = startY + (endY - startY) * breakPointRatio;
+                    let hue = (260 + 40 * Math.sin(angleBase * 3 + time)) % 360;
+                    let sat = 75 + 15 * Math.sin(angleBase * 2);
+                    let light = 45 + 30 * Math.sin(angleBase * 4 + time * 2);
+                    let color = `hsl(${hue}, ${sat}%, ${light}%)`;
+                    let lineWidth = 0.8 + (glowPressure / 100) * 1.2;
+                    lineWidth *= isStrandBroken ? Math.max(0.1, 1 - (strandProgress - 0.85) * 3) : 1;
+                    lineWidth += 0.5 * Math.sin(angleBase * 6 + time);
+                    lineWidth = Math.max(0.3, lineWidth);
+                    glowCtx.beginPath();
+                    glowCtx.moveTo(startX, startY);
+                    if (isMouseInside) {
+                        let midX = (startX + displayEndX) / 2 + (Math.random() - 0.5) * 10;
+                        let midY = (startY + displayEndY) / 2;
+                        if (Math.abs(mouseVerticalPos) < 0.6) midY -= bendAmount * (radius - startR) * 0.5;
+                        glowCtx.quadraticCurveTo(midX, midY, displayEndX, displayEndY);
+                    } else {
+                        glowCtx.lineTo(displayEndX, displayEndY);
+                    }
+                    glowCtx.lineWidth = lineWidth;
+                    glowCtx.strokeStyle = color;
+                    glowCtx.shadowBlur = 8 + glowVoltage / 100 * 10;
+                    glowCtx.shadowColor = color;
+                    glowCtx.stroke();
+                    if (glowVoltage > 50 && !isStrandBroken && Math.random() > 0.65) {
+                        let branchRatio = 0.35 + Math.random() * 0.3;
+                        let branchStartX = startX + (displayEndX - startX) * branchRatio;
+                        let branchStartY = startY + (displayEndY - startY) * branchRatio;
+                        let mainAngle = Math.atan2(displayEndY - startY, displayEndX - startX);
+                        let branchAngle = mainAngle + (Math.random() - 0.5) * 0.8;
+                        let branchLength = (1 - branchRatio) * Math.hypot(displayEndX - startX, displayEndY -
+                            startY);
+                        let branchEndX = branchStartX + branchLength * Math.cos(branchAngle);
+                        let branchEndY = branchStartY + branchLength * Math.sin(branchAngle);
+                        branchEndY -= bendAmount * branchLength * 0.3;
+                        glowCtx.beginPath();
+                        glowCtx.moveTo(branchStartX, branchStartY);
+                        glowCtx.lineTo(branchEndX, branchEndY);
+                        glowCtx.lineWidth = lineWidth * 0.5;
+                        glowCtx.strokeStyle = `hsl(${(hue + 30) % 360}, ${sat}%, ${light + 10}%)`;
+                        glowCtx.shadowBlur = 5;
+                        glowCtx.stroke();
+                    }
+                }
+                glowCtx.shadowBlur = 15;
+                glowCtx.shadowColor = 'rgba(255, 200, 100, 0.8)';
+                glowCtx.beginPath();
+                glowCtx.arc(cx, cy, 8 + glowVoltage / 50, 0, Math.PI * 2);
+                glowCtx.fillStyle = '#ffaa66';
+                glowCtx.fill();
+                glowCtx.shadowBlur = 0;
+                glowCtx.beginPath();
+                glowCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+                glowCtx.fillStyle = 'white';
+                glowCtx.fill();
+                glowCtx.beginPath();
+                glowCtx.arc(cx - 12, cy - 12, 12, 0, Math.PI * 2);
+                glowCtx.fillStyle = 'rgba(255,255,255,0.2)';
+                glowCtx.fill();
+                glowCtx.restore();
+            }
+
+            function animateGlowball() {
+                if (!glowballModule || glowballModule.style.display === 'none') return;
+                drawGlowball();
+                animationId = requestAnimationFrame(animateGlowball);
+            }
+
+            function cleanupGlowEvents() {
+                if (updateMouseHandler && glowCanvas) {
+                    glowCanvas.removeEventListener('mousemove', updateMouseHandler);
+                    glowCanvas.removeEventListener('mouseleave', leaveMouseHandler);
+                    glowCanvas.removeEventListener('touchmove', touchMoveHandler);
+                    glowCanvas.removeEventListener('touchend', touchEndHandler);
+                }
+            }
+
+            function initGlowballAnimation() {
+                cleanupGlowEvents();
+                if (animationId) cancelAnimationFrame(animationId);
+                resizeGlowCanvas();
+                updateMouseHandler = (e) => {
+                    const rect = glowCanvas.getBoundingClientRect();
+                    const scaleX = glowCanvas.width / rect.width,
+                        scaleY = glowCanvas.height / rect.height;
+                    let canvasX = (e.clientX - rect.left) * scaleX;
+                    let canvasY = (e.clientY - rect.top) * scaleY;
+                    canvasX = Math.min(glowCanvas.width - 5, Math.max(5, canvasX));
+                    canvasY = Math.min(glowCanvas.height - 5, Math.max(5, canvasY));
+                    mouseX = canvasX;
+                    mouseY = canvasY;
+                    isMouseInside = true;
+                };
+                leaveMouseHandler = () => {
+                    isMouseInside = false;
+                    mouseX = glowCanvas.width / 2;
+                    mouseY = glowCanvas.height / 2;
+                };
+                touchMoveHandler = (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const rect = glowCanvas.getBoundingClientRect();
+                    const scaleX = glowCanvas.width / rect.width,
+                        scaleY = glowCanvas.height / rect.height;
+                    let canvasX = (touch.clientX - rect.left) * scaleX;
+                    let canvasY = (touch.clientY - rect.top) * scaleY;
+                    canvasX = Math.min(glowCanvas.width - 5, Math.max(5, canvasX));
+                    canvasY = Math.min(glowCanvas.height - 5, Math.max(5, canvasY));
+                    mouseX = canvasX;
+                    mouseY = canvasY;
+                    isMouseInside = true;
+                };
+                touchEndHandler = () => {
+                    isMouseInside = false;
+                    mouseX = glowCanvas.width / 2;
+                    mouseY = glowCanvas.height / 2;
+                };
+                glowCanvas.addEventListener('mousemove', updateMouseHandler);
+                glowCanvas.addEventListener('mouseleave', leaveMouseHandler);
+                glowCanvas.addEventListener('touchmove', touchMoveHandler);
+                glowCanvas.addEventListener('touchend', touchEndHandler);
+                animateGlowball();
+            }
+
+            function stopGlowAnimation() {
+                cleanupGlowEvents();
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+            }
+
+            function initGlowballControls() {
+                const vs = document.getElementById('glowVoltageSlider');
+                const ps = document.getElementById('glowPressureSlider');
+                const vv = document.getElementById('glowVoltageVal');
+                const pv = document.getElementById('glowPressureVal');
+                vs.addEventListener('input', () => {
+                    glowVoltage = parseInt(vs.value);
+                    vv.textContent = glowVoltage;
+                });
+                ps.addEventListener('input', () => {
+                    glowPressure = parseInt(ps.value);
+                    pv.textContent = glowPressure;
+                });
+            }
+
+            // ====================== 辉光放电仿真 ======================
+            const voltageSlider = document.getElementById('voltageSlider');
+            const voltageInput = document.getElementById('voltageInput');
+            const pressureSlider = document.getElementById('pressureSlider');
+            const pressureInput = document.getElementById('pressureInput');
+            const distanceSlider = document.getElementById('distanceSlider');
+            const distanceInput = document.getElementById('distanceInput');
+            const areaSlider = document.getElementById('areaSlider');
+            const areaInput = document.getElementById('areaInput');
+            const gasSelect = document.getElementById('gasSelect');
+            const dischargeStateSpan = document.getElementById('dischargeStateLabel');
+            const paschenVspan = document.getElementById('paschenV');
+            const paschenVinline = document.getElementById('paschenVinline');
+            const simCurrentSpan = document.getElementById('simCurrent');
+            const currentDensitySpan = document.getElementById('currentDensity');
+            const resetBtn = document.getElementById('resetBtn');
+            const presetStandardBtn = document.getElementById('presetStandardBtn');
+            const presetNeonBtn = document.getElementById('presetNeonBtn');
+            const dischargeCanvas = document.getElementById('dischargeCanvas');
+            const ctxDischarge = dischargeCanvas.getContext('2d');
+            const ivCanvas = document.getElementById('iVCurveCanvas');
+            const ctxIV = ivCanvas.getContext('2d');
+
+            dischargeCanvas.width = 700;
+            dischargeCanvas.height = 190;
+            ivCanvas.width = 820;
+            ivCanvas.height = 370;
+
+            const gasParams = {
+                air: { A: 15.0, B: 365, gamma: 0.01, name: "空气", Uc: 250 },
+                ar: { A: 12.0, B: 176, gamma: 0.07, name: "氩气", Uc: 150 },
+                ne: { A: 4.0, B: 100, gamma: 0.04, name: "氖气", Uc: 120 }
+            };
+
+            let currentVoltage = 400,
+                currentPressure = 100,
+                currentDistance = 5.0,
+                currentArea = 10,
+                currentGas = 'ar',
+                cachedVb = 500;
+            let isSyncing = false;
+
+            function calculatePaschenBreakdown(p_Pa, d_mm, gasKey) {
+                const gas = gasParams[gasKey];
+                if (!gas) return 9999;
+                const p_Torr = p_Pa * 0.00750062;
+                const d_cm = d_mm / 10.0;
+                const pd = p_Torr * d_cm;
+                if (pd <= 1e-8) return 9999;
+                const A = gas.A,
+                    B = gas.B,
+                    gamma = gas.gamma;
+                const lnArg = A * pd;
+                if (lnArg <= 1e-8) return 9999;
+                const innerLog = Math.log(1 + 1 / gamma);
+                if (innerLog <= 0) return 9999;
+                const denominator = Math.log(lnArg) - Math.log(innerLog);
+                if (denominator <= 1e-8) return 9999;
+                let Vb = (B * pd) / denominator;
+                Vb = Math.min(Vb, 3000);
+                return Vb > 0 ? Vb : 9999;
+            }
+
+            function calculateCurrent(U, Vb, area) {
+                let logI;
+                if (U < Vb * 0.3) {
+                    logI = -12 + (U / (Vb * 0.3)) * 3;
+                } else if (U < Vb * 0.7) {
+                    logI = -9 + ((U - Vb * 0.3) / (Vb * 0.4)) * 3;
+                } else if (U < Vb) {
+                    logI = -6 + ((U - Vb * 0.7) / (Vb * 0.3)) * 0.8;
+                } else if (U < Vb * 1.05) {
+                    logI = -5.2 + ((U - Vb) / (Vb * 0.05)) * 1.2;
+                } else if (U < Vb * 1.6) {
+                    logI = -4 + ((U - Vb * 1.05) / (Vb * 0.55)) * 2;
+                } else if (U < Vb * 2.0) {
+                    logI = -2 + ((U - Vb * 1.6) / (Vb * 0.4)) * 2;
+                } else if (U < Vb * 2.5) {
+                    logI = 0 + ((U - Vb * 2.0) / (Vb * 0.5)) * 1;
+                } else {
+                    logI = 1 + ((U - Vb * 2.5) / (Vb * 1.5)) * 3;
+                }
+                logI = Math.min(5, Math.max(-12, logI));
+                let baseCurrent = Math.pow(10, logI);
+                return baseCurrent * (area / 10);
+            }
+
+            function getRegionIntensity(U, Vb, current, p_Pa, d_mm) {
+                let breakdown = (U >= Vb);
+                let cathode = breakdown ? 0.3 + 0.5 * Math.min(1, (U - Vb) / (Vb + 0.1)) : 0.08;
+                cathode = Math.min(0.95, Math.max(0.1, cathode));
+                let negativeGlow = breakdown ? 0.4 + 0.6 * Math.min(1, current / 10) : 0.05;
+                negativeGlow = Math.min(0.9, negativeGlow);
+                let positiveColumn = breakdown ? 0.2 + 0.5 * Math.min(1, current / 12) : 0.02;
+                positiveColumn = Math.min(0.7, positiveColumn);
+                return { cathode, negativeGlow, positiveColumn };
+            }
+
+            const regionDescriptions = {
+                aston: "阿斯顿暗区：紧贴阴极的极薄暗区，电子刚离开阴极，动能较低，尚未激发发光。",
+                cathodeGlow: "阴极辉区：电子获得足够能量后与气体分子碰撞激发，发出淡红色或淡蓝色辉光。",
+                crookes: "克鲁克斯暗区：电子能量过高，来不及激发分子，形成暗区，正离子在此加速。",
+                negativeGlow: "负辉区：电子能量下降到适合激发发光的范围，形成最明亮的区域，呈蓝色或紫红色。",
+                faraday: "法拉第暗区：电子能量进一步降低，电离和激发减弱，再次变暗。",
+                positiveColumn: "正柱区：电场均匀，电子能量稳定，形成均匀的辉光柱，霓虹灯利用此区。",
+                anodeGlow: "阳极区：电子向阳极运动，局部电场增强，形成薄层阳极辉光。"
+            };
+
+            const ivRegionDescriptions = {
+                AB: { name: "本底电离区 (A→B)",
+                    desc: "宇宙射线产生少量自由电子(10⁻¹⁰~10⁻⁹A)，电流随电压缓慢上升。0V时无定向电场，载流子全部复合。" },
+                BC: { name: "饱和区 (B→C)", desc: "所有本底电离电子被阳极收集，电流饱和在~10⁻⁹A，不再随电压升高而增大。" },
+                CD: { name: "汤生放电区 (C→D)",
+                    desc: "电子雪崩电离开始，电流指数增长(~10⁻⁹→10⁻⁷A)。公式：I=I₀·e^(αd)，α为汤森第一电离系数。" },
+                DE: { name: "电晕/击穿临界 (D→E)",
+                    desc: "局部自持放电出现，汤森判据满足：γ(e^(αd)−1)=1。击穿电压~270V(标准条件)。" },
+                EF: { name: "击穿过渡 (E→F)", desc: "电压骤降至阴极位降(~160V Ar-Cu)，自持辉光建立，电流跃升至10⁻⁵·⁵A量级。E和F在同一电流垂线上。" },
+                FG: { name: "正常辉光区 (F→F'→G)", desc: "电压恒定=阴极位降，电流随放电面积扩大而增大(10⁻⁵·⁵→10⁻²A)。F与F'等电压，F'电流稍大。辉光球工作在此区。" },
+                GH: { name: "异常辉光区 (G→H)", desc: "阴极全部面积参与放电，只能靠提高电压增加电流密度。电压升至~450V，电流达~1A。" },
+                HI: { name: "辉光→电弧过渡 (H→I)", desc: "阴极温度升高，热电子发射启动，电压断崖式下跌至~120V，电流暴增至20A。" },
+                IJ: { name: "非热电弧区 (I→J)", desc: "负阻特性，电流增大时电压反而下降。最低维持电压~25V@100A。理查森公式：j=AT²·exp(−W/kT)。" },
+                JK: { name: "热电弧区 (J→K)", desc: "稳定高温电弧，电压随电流缓慢上升(30-40V@10⁴A)。用于焊接、切割等工业应用。" }
+            };
+
+            function drawDischargeRegions(U, Vb, current, p, d_mm) {
+                const w = dischargeCanvas.width,
+                    h = dischargeCanvas.height;
+                ctxDischarge.clearRect(0, 0, w, h);
+                ctxDischarge.fillStyle = "#11161c";
+                ctxDischarge.fillRect(0, 0, w, h);
+                const minX = 65,
+                    maxX = w - 65;
+                const d_min = 0.5,
+                    d_max = 60;
+                let anodeX = minX + (d_mm - d_min) / (d_max - d_min) * (maxX - minX);
+                anodeX = Math.min(maxX, Math.max(minX + 30, anodeX));
+                const cathodeX = minX;
+                const totalGap = anodeX - cathodeX;
+                if (totalGap <= 5) return;
+                const yTop = 30,
+                    yBottom = h - 30;
+                ctxDischarge.fillStyle = "#7a5a3a";
+                ctxDischarge.fillRect(cathodeX - 15, yTop, 15, yBottom - yTop);
+                ctxDischarge.fillStyle = "#9e7e5a";
+                ctxDischarge.fillRect(anodeX, yTop, 15, yBottom - yTop);
+                ctxDischarge.fillStyle = "#f5d5b0";
+                ctxDischarge.font = "bold 12px 'Segoe UI','PingFang SC',sans-serif";
+                ctxDischarge.textAlign = "center";
+                ctxDischarge.fillText("阴极 (−)", cathodeX - 8, yTop - 10);
+                ctxDischarge.fillText("阳极 (+)", anodeX + 8, yTop - 10);
+                ctxDischarge.textAlign = "start";
+                const intensity = getRegionIntensity(U, Vb, current, p, d_mm);
+                const astonPct = 0.02,
+                    cathodeGlowPct = 0.03,
+                    crookesPct = 0.08,
+                    negativeGlowPct = 0.22,
+                    faradayPct = 0.12,
+                    positivePct = 0.48,
+                    anodePct = 0.05;
+                let astonLen = totalGap * astonPct;
+                let cathodeGlowLen = totalGap * cathodeGlowPct;
+                let crookesLen = totalGap * crookesPct;
+                let negativeLen = totalGap * negativeGlowPct;
+                let faradayLen = totalGap * faradayPct;
+                let positiveLen = totalGap * positivePct;
+                let anodeLen = totalGap * anodePct;
+                let sum = astonLen + cathodeGlowLen + crookesLen + negativeLen + faradayLen + positiveLen + anodeLen;
+                let adjust = totalGap / sum;
+                astonLen *= adjust;
+                cathodeGlowLen *= adjust;
+                crookesLen *= adjust;
+                negativeLen *= adjust;
+                faradayLen *= adjust;
+                positiveLen *= adjust;
+                anodeLen = totalGap - (astonLen + cathodeGlowLen + crookesLen + negativeLen + faradayLen +
+                positiveLen);
+                let x = cathodeX;
+                const regions = [
+                    { len: astonLen, color: `rgba(50,40,60,${intensity.cathode*0.8})`, label: "阿斯顿暗区",
+                        key: "aston" },
+                    { len: cathodeGlowLen, color: `rgba(180,160,100,${intensity.cathode*0.6})`, label: "阴极辉区",
+                        key: "cathodeGlow" },
+                    { len: crookesLen, color: `rgba(30,35,50,${intensity.cathode*0.7})`, label: "克鲁克斯暗区",
+                        key: "crookes" },
+                    { len: negativeLen, color: `rgba(100,180,255,${intensity.negativeGlow*0.95})`, label: "负辉区",
+                        key: "negativeGlow" },
+                    { len: faradayLen, color: `rgba(40,50,70,${intensity.negativeGlow*0.4})`, label: "法拉第暗区",
+                        key: "faraday" },
+                    { len: positiveLen, color: `rgba(255,140,80,${intensity.positiveColumn*0.7})`, label: "正柱区",
+                        key: "positiveColumn" },
+                    { len: anodeLen, color: `rgba(80,180,100,${intensity.positiveColumn*0.5})`, label: "阳极区",
+                        key: "anodeGlow" }
+                ];
+                regions.forEach(region => {
+                    ctxDischarge.fillStyle = region.color;
+                    ctxDischarge.fillRect(x, yTop, region.len, yBottom - yTop);
+                    x += region.len;
+                });
+                const isBreakdown = (U >= Vb);
+                const glowIntensity = isBreakdown ? Math.min(1, (U - Vb + 50) / 100) : 0;
+                if (isBreakdown) {
+                    ctxDischarge.save();
+                    ctxDischarge.globalCompositeOperation = 'screen';
+                    const glowGrad = ctxDischarge.createLinearGradient(cathodeX, yTop, anodeX, yBottom);
+                    glowGrad.addColorStop(0, `rgba(100,150,255,${0.1*glowIntensity})`);
+                    glowGrad.addColorStop(0.3, `rgba(150,200,255,${0.2*glowIntensity})`);
+                    glowGrad.addColorStop(0.7, `rgba(255,180,100,${0.15*glowIntensity})`);
+                    glowGrad.addColorStop(1, `rgba(100,255,150,${0.1*glowIntensity})`);
+                    ctxDischarge.fillStyle = glowGrad;
+                    ctxDischarge.fillRect(cathodeX, yTop, totalGap, yBottom - yTop);
+                    ctxDischarge.fillStyle = `rgba(255,240,180,${0.3+0.4*glowIntensity})`;
+                    for (let i = 0; i < 55 + 35 * glowIntensity; i++) {
+                        let px = cathodeX + 5 + Math.random() * totalGap;
+                        let py = yTop + 5 + Math.random() * (yBottom - yTop - 10);
+                        let sz = 1 + Math.random() * 2 * (0.5 + 0.5 * glowIntensity);
+                        ctxDischarge.beginPath();
+                        ctxDischarge.arc(px, py, sz, 0, Math.PI * 2);
+                        ctxDischarge.fill();
+                    }
+                    ctxDischarge.strokeStyle = `rgba(100,200,255,${0.3*glowIntensity})`;
+                    ctxDischarge.lineWidth = 1;
+                    for (let i = 0; i < 8; i++) {
+                        let sy = yTop + 10 + Math.random() * (yBottom - yTop - 20);
+                        ctxDischarge.beginPath();
+                        ctxDischarge.moveTo(cathodeX + 10, sy);
+                        let cpX = cathodeX + totalGap * 0.5;
+                        let cpY = sy + (Math.random() - 0.5) * 20;
+                        ctxDischarge.quadraticCurveTo(cpX, cpY, anodeX - 10, sy + (Math.random() - 0.5) * 10);
+                        ctxDischarge.stroke();
+                    }
+                    ctxDischarge.restore();
+                    ctxDischarge.fillStyle = '#2ecc71';
+                    ctxDischarge.beginPath();
+                    ctxDischarge.arc(cathodeX - 34, yTop - 4, 7, 0, Math.PI * 2);
+                    ctxDischarge.fill();
+                    ctxDischarge.shadowBlur = 12;
+                    ctxDischarge.shadowColor = '#2ecc71';
+                    ctxDischarge.fillStyle = '#fff';
+                    ctxDischarge.beginPath();
+                    ctxDischarge.arc(cathodeX - 34, yTop - 4, 3.5, 0, Math.PI * 2);
+                    ctxDischarge.fill();
+                    ctxDischarge.shadowBlur = 0;
+                    ctxDischarge.font = 'bold 11px sans-serif';
+                    ctxDischarge.fillStyle = '#2ecc71';
+                    ctxDischarge.fillText('● 辉光管已点亮', cathodeX - 24, yTop - 2);
+                } else {
+                    ctxDischarge.fillStyle = '#e74c3c';
+                    ctxDischarge.beginPath();
+                    ctxDischarge.arc(cathodeX - 34, yTop - 4, 6, 0, Math.PI * 2);
+                    ctxDischarge.fill();
+                    ctxDischarge.font = '11px sans-serif';
+                    ctxDischarge.fillStyle = '#e74c3c';
+                    ctxDischarge.fillText('○ 未触发 (需≥' + Math.round(Vb) + 'V)', cathodeX - 24, yTop - 2);
+                }
+                setupRegionTooltip(cathodeX, totalGap, regions, yTop, yBottom);
+            }
+
+            function setupRegionTooltip(cathodeX, totalGap, regions, yTop, yBottom) {
+                const canvas = dischargeCanvas;
+                const onMouseMove = (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const scaleX = canvas.width / rect.width;
+                    const scaleY = canvas.height / rect.height;
+                    let canvasX = (e.clientX - rect.left) * scaleX;
+                    let canvasY = (e.clientY - rect.top) * scaleY;
+                    if (canvasY < yTop || canvasY > yBottom) {
+                        globalTooltip.style.opacity = '0';
+                        return;
+                    }
+                    let posX = canvasX;
+                    let startX = cathodeX;
+                    let found = null;
+                    for (let reg of regions) {
+                        let endX = startX + reg.len;
+                        if (posX >= startX && posX <= endX) { found = reg; break; }
+                        startX = endX;
+                    }
+                    if (found && found.key && regionDescriptions[found.key]) {
+                        globalTooltip.innerHTML =
+                            `<strong>${found.label}</strong><br>${regionDescriptions[found.key]}`;
+                        globalTooltip.style.left = (e.clientX + 15) + 'px';
+                        globalTooltip.style.top = (e.clientY - 50) + 'px';
+                        globalTooltip.style.opacity = '1';
+                    } else {
+                        globalTooltip.style.opacity = '0';
+                    }
+                };
+                const onMouseLeave = () => { globalTooltip.style.opacity = '0'; };
+                canvas.removeEventListener('mousemove', onMouseMove);
+                canvas.removeEventListener('mouseleave', onMouseLeave);
+                canvas.addEventListener('mousemove', onMouseMove);
+                canvas.addEventListener('mouseleave', onMouseLeave);
+            }
+
+            function drawIVCurve(operU, operI, Vb, gasKey) {
+                const w = ivCanvas.width,
+                    h = ivCanvas.height;
+                ctxIV.clearRect(0, 0, w, h);
+                ctxIV.fillStyle = "#fdfaf3";
+                ctxIV.fillRect(0, 0, w, h);
+
+                const marginLeft = 105,
+                    marginRight = 50,
+                    marginTop = 50,
+                    marginBottom = 60;
+                const chartW = w - marginLeft - marginRight,
+                    chartH = h - marginTop - marginBottom;
+                // 横轴起点改为 -11，终点 5，以容纳 A 点 10⁻¹⁰ 并有合适边距
+                const logMin = -11,
+                    logMax = 5;
+                const gas = gasParams[gasKey];
+                const Uc = gas ? gas.Uc : 150;
+                const Vb_clamped = Math.min(1100, Math.max(80, Vb));
+                const normalGlowVoltage = Math.min(Uc, Vb_clamped * 0.7);
+
+                // ★ 关键点定义 — 按照用户要求的电流值调整 logI
+                const points = {
+                    A: { logI: -10, U: 8, region: 'AB', label: 'A' },
+                    B: { logI: -9, U: 25, region: 'BC', label: 'B' },
+                    C: { logI: -8, U: 90, region: 'CD', label: 'C' },
+                    D: { logI: -7, U: Math.min(Vb_clamped * 0.88, Vb_clamped - 18), region: 'DE', label: 'D' },
+                    E: { logI: -5.5, U: Vb_clamped, region: 'EF', label: 'E' },
+                    F: { logI: -5.5, U: normalGlowVoltage, region: 'FG', label: 'F' },
+                    Fp: { logI: -4, U: normalGlowVoltage, region: 'FG', label: "F'" },
+                    G: { logI: -2, U: normalGlowVoltage, region: 'FG', label: 'G' },
+                    H: { logI: 0, U: Math.min(normalGlowVoltage + 90, Vb_clamped + 70), region: 'GH', label: 'H' },
+                    I: { logI: 1.3, U: Math.max(80, normalGlowVoltage * 0.55), region: 'HI', label: 'I' },
+                    J: { logI: 2, U: 28, region: 'IJ', label: 'J' },
+                    K: { logI: 4, U: 38, region: 'JK', label: 'K' }
+                };
+                if (points.D.U <= points.C.U) points.D.U = points.C.U + 15;
+                if (points.E.U <= points.D.U) points.E.U = points.D.U + 25;
+                if (points.F.U >= points.E.U) points.F.U = points.E.U - 30;
+                if (points.F.U < 55) points.F.U = 55;
+                if (points.Fp.U !== points.F.U) points.Fp.U = points.F.U;
+                if (points.G.U !== points.F.U) points.G.U = points.F.U;
+
+                // 动态电压轴：取所有关键点及工作点中最大电压的120%
+                let maxVoltageOnCurve = Math.max(
+                    points.D.U, points.E.U, points.H.U, operU, 200
+                );
+                let dynamicMaxU = Math.ceil(maxVoltageOnCurve * 1.2 / 20) * 20;
+                dynamicMaxU = Math.min(1200, Math.max(300, dynamicMaxU));
+
+                const operLogI = Math.log10(Math.max(1e-13, operI));
+                // 根据新的 logI 范围判断工作点所处区域
+                let activeRegion = '';
+                if (operLogI < -9) activeRegion = 'AB';
+                else if (operLogI < -8) activeRegion = 'BC';
+                else if (operLogI < -6) activeRegion = 'CD';
+                else if (operLogI < -5) activeRegion = 'DE';
+                else if (operLogI < -4 && operU >= Vb_clamped) activeRegion = 'EF';
+                else if (operLogI < 0 && operU < Vb_clamped * 1.3) activeRegion = 'FG';
+                else if (operLogI < 1 && operU > normalGlowVoltage + 20) activeRegion = 'GH';
+                else if (operLogI < 2 && operU < normalGlowVoltage) activeRegion = 'HI';
+                else if (operLogI < 3) activeRegion = 'IJ';
+                else activeRegion = 'JK';
+
+                function getPixel(p) {
+                    let x = marginLeft + ((p.logI - logMin) / (logMax - logMin)) * chartW;
+                    let y = h - marginBottom - (p.U / dynamicMaxU) * chartH;
+                    return { x, y };
+                }
+                const pix = {};
+                for (let key in points) pix[key] = getPixel(points[key]);
+
+                function drawCurveSeg(from, to, color = "#2c6e9e", width = 2.8, dashed = false, region = '') {
+                    const isActive = (region === activeRegion);
+                    ctxIV.beginPath();
+                    ctxIV.moveTo(from.x, from.y);
+                    ctxIV.lineTo(to.x, to.y);
+                    ctxIV.setLineDash(dashed ? [8, 5] : []);
+                    ctxIV.strokeStyle = isActive ? '#e74c3c' : color;
+                    ctxIV.lineWidth = isActive ? width + 2 : width;
+                    ctxIV.stroke();
+                    ctxIV.setLineDash([]);
+                }
+
+                // 背景区域色块（按 logI 划分，更新范围）
+                const regionRanges = [
+                    { name: '暗放电区', start: -10, end: -5.5, color: '#34495e' },
+                    { name: '辉光放电区', start: -5.5, end: 0, color: '#9b59b6' },
+                    { name: '电弧放电区', start: 0, end: 4, color: '#e74c3c' }
+                ];
+                regionRanges.forEach(r => {
+                    let x1 = marginLeft + ((r.start - logMin) / (logMax - logMin)) * chartW;
+                    let x2 = marginLeft + ((r.end - logMin) / (logMax - logMin)) * chartW;
+                    ctxIV.fillStyle = r.color + '18';
+                    ctxIV.fillRect(x1, marginTop, x2 - x1, chartH);
+                    ctxIV.fillStyle = r.color;
+                    ctxIV.fillRect(x1 + 4, marginTop - 34, Math.min(100, x2 - x1 - 8), 22);
+                    ctxIV.fillStyle = '#fff';
+                    ctxIV.font = 'bold 11px "PingFang SC","Segoe UI",sans-serif';
+                    ctxIV.fillText(r.name, x1 + 8, marginTop - 18);
+                });
+
+                // 坐标轴
+                ctxIV.beginPath();
+                ctxIV.strokeStyle = "#444";
+                ctxIV.lineWidth = 1.8;
+                ctxIV.moveTo(marginLeft, h - marginBottom);
+                ctxIV.lineTo(w - marginRight, h - marginBottom);
+                ctxIV.moveTo(marginLeft, marginTop);
+                ctxIV.lineTo(marginLeft, h - marginBottom);
+                ctxIV.stroke();
+
+                // 横轴标签 (logI)，从 -11 到 5，每 2 个单位标注
+                ctxIV.font = "10px sans-serif";
+                ctxIV.fillStyle = "#5a7a9e";
+                for (let li = -11; li <= 5; li += 2) {
+                    let x = marginLeft + ((li - logMin) / (logMax - logMin)) * chartW;
+                    if (x >= marginLeft && x <= w - marginRight) {
+                        ctxIV.beginPath();
+                        ctxIV.moveTo(x, h - marginBottom);
+                        ctxIV.lineTo(x, h - marginBottom + 6);
+                        ctxIV.stroke();
+                        ctxIV.fillText("10^" + li, x - 16, h - marginBottom + 18);
+                    }
+                }
+                // 纵轴标签
+                ctxIV.fillStyle = "#5a7a9e";
+                const uStep = dynamicMaxU <= 400 ? 50 : (dynamicMaxU <= 600 ? 100 : 150);
+                for (let u = 0; u <= dynamicMaxU; u += uStep) {
+                    let y = h - marginBottom - (u / dynamicMaxU) * chartH;
+                    ctxIV.beginPath();
+                    ctxIV.moveTo(marginLeft - 6, y);
+                    ctxIV.lineTo(marginLeft, y);
+                    ctxIV.stroke();
+                    ctxIV.fillText(u, marginLeft - 36, y + 4);
+                }
+                ctxIV.fillStyle = "#3a5a7e";
+                ctxIV.font = "bold 11px sans-serif";
+                ctxIV.fillText("电压 (V)", marginLeft - 50, marginTop - 18);
+                ctxIV.fillText("电流 log₁₀(I/A)", w - marginRight - 30, h - marginBottom + 30);
+
+                // 绘制曲线段
+                drawCurveSeg(pix.A, pix.B, "#2c6e9e", 2.8, false, 'AB');
+                drawCurveSeg(pix.B, pix.C, "#2c6e9e", 2.8, false, 'BC');   // B 和 C 同 logI，垂直段
+                drawCurveSeg(pix.C, pix.D, "#2c6e9e", 2.8, false, 'CD');
+                drawCurveSeg(pix.D, pix.E, "#9b59b6", 2.8, false, 'DE');
+                drawCurveSeg(pix.E, pix.F, "#d97706", 2.5, true, 'EF');   // 击穿过渡虚线
+                drawCurveSeg(pix.D, pix.F, "#9b59b6", 2.8, false, 'DF');
+                drawCurveSeg(pix.F, pix.Fp, "#9b59b6", 3.2, false, 'FG');
+                drawCurveSeg(pix.Fp, pix.G, "#9b59b6", 3.2, false, 'FG');
+                drawCurveSeg(pix.G, pix.H, "#9b59b6", 2.8, false, 'GH');
+                drawCurveSeg(pix.H, pix.I, "#d97706", 2.5, true, 'HI');
+                drawCurveSeg(pix.I, pix.J, "#e74c3c", 2.8, false, 'IJ');
+                drawCurveSeg(pix.J, pix.K, "#e74c3c", 2.8, false, 'JK');
+
+                // 绘制关键点
+                for (let key in points) {
+                    let p = pix[key];
+                    let lbl = points[key].label;
+                    let reg = points[key].region;
+                    let isActive = (reg === activeRegion);
+                    ctxIV.beginPath();
+                    ctxIV.fillStyle = isActive ? '#e74c3c' : '#c0392b';
+                    ctxIV.arc(p.x, p.y, isActive ? 8 : 6, 0, Math.PI * 2);
+                    ctxIV.fill();
+                    ctxIV.fillStyle = '#fff';
+                    ctxIV.beginPath();
+                    ctxIV.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+                    ctxIV.fill();
+                    ctxIV.fillStyle = '#7a2020';
+                    ctxIV.font = 'bold 11px sans-serif';
+                    ctxIV.fillText(lbl, p.x - 7, p.y - 11);
+                }
+
+                // 区域标注
+                const regionLabels = [
+                    { x: (pix.A.x + pix.B.x) / 2, y: pix.A.y - 14, text: "本底电离", reg: 'AB' },
+                    { x: (pix.B.x + pix.C.x) / 2, y: pix.C.y + 20, text: "饱和区", reg: 'BC' },
+                    { x: (pix.C.x + pix.D.x) / 2, y: pix.D.y - 14, text: "汤生放电", reg: 'CD' },
+                    { x: (pix.F.x + pix.G.x) / 2, y: pix.F.y - 14, text: "正常辉光", reg: 'FG' },
+                    { x: (pix.G.x + pix.H.x) / 2, y: pix.H.y - 14, text: "异常辉光", reg: 'GH' },
+                    { x: (pix.I.x + pix.J.x) / 2, y: pix.I.y - 14, text: "非热电弧", reg: 'IJ' },
+                    { x: (pix.J.x + pix.K.x) / 2, y: pix.K.y + 18, text: "热电弧", reg: 'JK' }
+                ];
+                ctxIV.font = 'italic 10px sans-serif';
+                regionLabels.forEach(lbl => {
+                    ctxIV.fillStyle = lbl.reg === activeRegion ? '#e74c3c' : '#5a7a9e';
+                    ctxIV.fillText(lbl.text, lbl.x - 20, lbl.y);
+                });
+
+                // 击穿电压虚线
+                let yVb = h - marginBottom - (Vb_clamped / dynamicMaxU) * chartH;
+                ctxIV.beginPath();
+                ctxIV.setLineDash([5, 4]);
+                ctxIV.strokeStyle = "#e67e22";
+                ctxIV.lineWidth = 2.2;
+                ctxIV.moveTo(marginLeft, yVb);
+                ctxIV.lineTo(w - marginRight, yVb);
+                ctxIV.stroke();
+                ctxIV.fillStyle = "#e67e22";
+                ctxIV.font = "bold 10px sans-serif";
+                ctxIV.fillText(`击穿电压 ${Math.round(Vb_clamped)}V`, marginLeft + 8, yVb - 5);
+                // 阴极位降虚线
+                let yUc = h - marginBottom - (Uc / dynamicMaxU) * chartH;
+                ctxIV.beginPath();
+                ctxIV.setLineDash([3, 4]);
+                ctxIV.strokeStyle = "#2c9e6e";
+                ctxIV.lineWidth = 1.6;
+                ctxIV.moveTo(marginLeft, yUc);
+                ctxIV.lineTo(w - marginRight, yUc);
+                ctxIV.stroke();
+                ctxIV.fillStyle = "#2c9e6e";
+                ctxIV.font = "italic 9px sans-serif";
+                ctxIV.fillText(`阴极位降 ${Uc}V`, marginLeft + 8, yUc - 4);
+                ctxIV.setLineDash([]);
+
+                ctxIV.fillStyle = "#7a8fa0";
+                ctxIV.font = "italic 9px sans-serif";
+                ctxIV.fillText(`纵轴范围: 0–${dynamicMaxU}V (最大电压×120%)`, w - marginRight - 180, marginTop - 30);
+
+                setupIVTooltip(marginLeft, marginTop, chartW, chartH, h - marginBottom, logMin, logMax, dynamicMaxU,
+                    points, pix);
+            }
+
+            function setupIVTooltip(marginLeft, marginTop, chartW, chartH, chartBottom, logMin, logMax, maxU, points,
+            pix) {
+                const onMouseMove = (e) => {
+                    const rect = ivCanvas.getBoundingClientRect();
+                    const scaleX = ivCanvas.width / rect.width;
+                    const scaleY = ivCanvas.height / rect.height;
+                    let canvasX = (e.clientX - rect.left) * scaleX;
+                    let canvasY = (e.clientY - rect.top) * scaleY;
+                    if (canvasX < marginLeft || canvasX > marginLeft + chartW ||
+                        canvasY < marginTop || canvasY > chartBottom) {
+                        globalTooltip.style.opacity = '0';
+                        return;
+                    }
+                    let logI = logMin + ((canvasX - marginLeft) / chartW) * (logMax - logMin);
+                    let region = '';
+                    if (logI < points.B.logI) region = 'AB';
+                    else if (logI < points.C.logI) region = 'BC';
+                    else if (logI < points.D.logI) region = 'CD';
+                    else if (logI < points.E.logI) region = 'DE';
+                    else if (logI < points.F.logI) region = 'EF';
+                    else if (logI < points.G.logI) region = 'FG';
+                    else if (logI < points.H.logI) region = 'GH';
+                    else if (logI < points.I.logI) region = 'HI';
+                    else if (logI < points.J.logI) region = 'IJ';
+                    else region = 'JK';
+                    if (region && ivRegionDescriptions[region]) {
+                        let desc = ivRegionDescriptions[region];
+                        globalTooltip.innerHTML =
+                            `<strong style="color:#ffaa44;">${desc.name}</strong><br>${desc.desc}`;
+                        globalTooltip.style.left = (e.clientX + 15) + 'px';
+                        globalTooltip.style.top = (e.clientY - 70) + 'px';
+                        globalTooltip.style.opacity = '1';
+                    } else {
+                        globalTooltip.style.opacity = '0';
+                    }
+                };
+                const onMouseLeave = () => { globalTooltip.style.opacity = '0'; };
+                ivCanvas.removeEventListener('mousemove', onMouseMove);
+                ivCanvas.removeEventListener('mouseleave', onMouseLeave);
+                ivCanvas.addEventListener('mousemove', onMouseMove);
+                ivCanvas.addEventListener('mouseleave', onMouseLeave);
+            }
+
+            function updateSimulation() {
+                currentVoltage = parseFloat(voltageSlider.value);
+                currentPressure = parseFloat(pressureSlider.value);
+                currentDistance = parseFloat(distanceSlider.value);
+                currentArea = parseFloat(areaSlider.value);
+                currentGas = gasSelect.value;
+                if (!isSyncing) {
+                    voltageInput.value = Math.round(currentVoltage);
+                    pressureInput.value = currentPressure;
+                    distanceInput.value = currentDistance.toFixed(1);
+                    areaInput.value = currentArea;
+                }
+                const gas = gasParams[currentGas];
+                if (gas) {
+                    document.getElementById('paramA').innerText = gas.A.toFixed(1);
+                    document.getElementById('paramB').innerText = gas.B.toFixed(0);
+                    document.getElementById('paramGamma').innerText = gas.gamma.toFixed(2);
+                    const p_Torr = currentPressure * 0.00750062;
+                    const d_cm = currentDistance / 10.0;
+                    document.getElementById('pdValue').innerText = (p_Torr * d_cm).toFixed(4);
+                }
+                let Vb = calculatePaschenBreakdown(currentPressure, currentDistance, currentGas);
+                cachedVb = Vb;
+                const VbDisplay = Vb > 2500 ? ">2500" : Math.round(Vb);
+                paschenVspan.innerText = VbDisplay;
+                paschenVinline.innerText = VbDisplay;
+                let current_A = calculateCurrent(currentVoltage, Vb, currentArea);
+                let currentDensity = current_A / Math.max(0.01, currentArea);
+                simCurrentSpan.innerText = current_A.toExponential(1);
+                currentDensitySpan.innerText = currentDensity.toExponential(1);
+                const logI = Math.log10(Math.max(1e-13, current_A));
+                let stateText = "";
+                if (logI < -8) stateText = "🟤 暗放电 (本底电离区 A→B)";
+                else if (logI < -6) stateText = "🟠 暗放电 (饱和区 B→C)";
+                else if (logI < -5.2) stateText = "🔴 暗放电 (汤生放电区 C→D)";
+                else if (currentVoltage >= Vb && logI < -3) stateText = "🟣 击穿过渡区 (E→F)";
+                else if (logI < -2 && currentVoltage < Vb * 1.3) stateText = "🟡 正常辉光放电区 (F→G)";
+                else if (logI < 0) stateText = "🟢 异常辉光放电区 (G→H)";
+                else if (logI < 1.5) stateText = "🔶 辉光→电弧过渡 (H→I)";
+                else if (logI < 2.5) stateText = "🔵 非热电弧区 (I→J)";
+                else stateText = "🔥 热电弧区 (J→K)";
+                dischargeStateSpan.innerText = stateText;
+                drawDischargeRegions(currentVoltage, Vb, current_A, currentPressure, currentDistance);
+                drawIVCurve(currentVoltage, current_A, Vb, currentGas);
+            }
+
+            function onSliderChange() {
+                if (isSyncing) return;
+                isSyncing = true;
+                updateSimulation();
+                isSyncing = false;
+            }
+
+            function onInputChange(sourceSlider, sourceInput, minVal, maxVal, decimals) {
+                if (isSyncing) return;
+                isSyncing = true;
+                let val = parseFloat(sourceInput.value);
+                if (isNaN(val)) val = parseFloat(sourceSlider.value);
+                val = Math.min(maxVal, Math.max(minVal, val));
+                sourceInput.value = decimals > 0 ? val.toFixed(decimals) : Math.round(val);
+                sourceSlider.value = val;
+                updateSimulation();
+                isSyncing = false;
+            }
+
+            voltageSlider.addEventListener('input', () => {
+                voltageInput.value = voltageSlider.value;
+                onSliderChange();
+            });
+            voltageInput.addEventListener('change', () => onInputChange(voltageSlider, voltageInput, 5, 1200, 0));
+            voltageInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') voltageInput.blur(); });
+            pressureSlider.addEventListener('input', () => {
+                pressureInput.value = pressureSlider.value;
+                onSliderChange();
+            });
+            pressureInput.addEventListener('change', () => onInputChange(pressureSlider, pressureInput, 1, 800, 1));
+            pressureInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') pressureInput.blur(); });
+            distanceSlider.addEventListener('input', () => {
+                distanceInput.value = parseFloat(distanceSlider.value).toFixed(1);
+                onSliderChange();
+            });
+            distanceInput.addEventListener('change', () => onInputChange(distanceSlider, distanceInput, 0.5, 60, 1));
+            distanceInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') distanceInput.blur(); });
+            areaSlider.addEventListener('input', () => {
+                areaInput.value = areaSlider.value;
+                onSliderChange();
+            });
+            areaInput.addEventListener('change', () => onInputChange(areaSlider, areaInput, 0.5, 100, 1));
+            areaInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') areaInput.blur(); });
+            gasSelect.addEventListener('change', updateSimulation);
+            resetBtn.addEventListener('click', () => {
+                setAllParams(400, 100, 5.0, 10, 'ar');
+            });
+            presetStandardBtn.addEventListener('click', () => {
+                setAllParams(270, 13.3, 50.0, 10, 'ar');
+            });
+            presetNeonBtn.addEventListener('click', () => {
+                setAllParams(180, 200, 3.0, 5, 'ne');
+            });
+
+            function setAllParams(voltage, pressure, distance, area, gasKey) {
+                isSyncing = true;
+                voltageSlider.value = voltage;
+                voltageInput.value = Math.round(voltage);
+                pressureSlider.value = pressure;
+                pressureInput.value = pressure;
+                distanceSlider.value = distance;
+                distanceInput.value = distance.toFixed(1);
+                areaSlider.value = area;
+                areaInput.value = area;
+                gasSelect.value = gasKey;
+                isSyncing = false;
+                updateSimulation();
+            }
+
+            function initDischargeSimulation() {
+                setAllParams(400, 100, 5.0, 10, 'ar');
+            }
+
+            window.addEventListener('load', () => {
+                initDischargeSimulation();
+                initGlowballControls();
+                if (glowCanvas) { resizeGlowCanvas();
+                    drawGlowball(); }
+                switchToDischarge();
+            });
+            window.addEventListener('beforeunload', () => {
+                stopGlowAnimation();
+            });
+            console.log('✅ 辉光放电仿真已更新：横轴调整为A=10⁻¹⁰，B/C=10⁻⁹，D=10⁻⁷，F=10⁻⁵·⁵，F\'=10⁻⁴，G=10⁻²，H=1，I≈20，J=100，K=10⁴');
+        })();
+    </script>
+</body>
+</html>
